@@ -13,6 +13,7 @@ export function ActiveCallScreen({ callType, isRecordingEnabled, shouldStartReco
   const [duration, setDuration] = useState(0);
   const [showFeedbackBanner, setShowFeedbackBanner] = useState(false);
   const [showScamAlert, setShowScamAlert] = useState(false);
+  const [showDataDeletedAlert, setShowDataDeletedAlert] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [permissionError, setPermissionError] = useState(false);
@@ -68,7 +69,7 @@ export function ActiveCallScreen({ callType, isRecordingEnabled, shouldStartReco
           
           // Check for scam keywords
           const lowerTranscript = finalTranscript.toLowerCase();
-          const scamKeywords = ['trúng thưởng', 'lừa đảo', 'đường dây'];
+          const scamKeywords = ['trúng thưởng', 'lừa đảo', 'đường dây', 'căn cước công dân'];
           const hasScamKeyword = scamKeywords.some(keyword => 
             lowerTranscript.includes(keyword)
           );
@@ -171,8 +172,61 @@ export function ActiveCallScreen({ callType, isRecordingEnabled, shouldStartReco
     }
   };
 
+  const handleEndCall = () => {
+    // Stop recognition if running
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        console.error('Error stopping recognition:', e);
+      }
+    }
+
+    // Show data deleted alert for normal calls with recording enabled
+    if (callType === 'normal' && isRecordingEnabled) {
+      setShowDataDeletedAlert(true);
+    } else {
+      onEndCall();
+    }
+  };
+
+  const handleCloseDataDeletedAlert = () => {
+    setShowDataDeletedAlert(false);
+    onEndCall();
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 flex flex-col relative">
+      {/* Data Deleted Alert */}
+      {showDataDeletedAlert && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-8 w-full shadow-2xl">
+            <div className="flex items-start gap-4 mb-6">
+              <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center flex-shrink-0">
+                <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h2 className="text-gray-900 mb-2">
+                  Hoàn tất
+                </h2>
+                <p className="text-gray-600">
+                  Dữ liệu cuộc gọi đã được xóa, bạn hoàn toàn an tâm
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={handleCloseDataDeletedAlert}
+              className="w-full min-h-[56px] bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-2xl transition-all duration-200 active:scale-98 shadow-lg"
+            >
+              Đã hiểu
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Scam Alert Dialog */}
       {showScamAlert && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 z-50 animate-in fade-in duration-200">
@@ -340,7 +394,7 @@ export function ActiveCallScreen({ callType, isRecordingEnabled, shouldStartReco
         <div className="w-full pb-4">
           <div className="flex justify-center">
             <button
-              onClick={onEndCall}
+              onClick={handleEndCall}
               className="group relative"
             >
               <div className="absolute inset-0 bg-red-500 rounded-full blur-xl opacity-40 group-active:opacity-60 transition-opacity"></div>
